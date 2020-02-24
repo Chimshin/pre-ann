@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 pd.set_option('display.max_rows', 500)
 
 
-def pub2bio(text_clean, procedure, id_list, out_file, b_tag, i_tag):
+def pub2bio(text_clean, procedure, id_list, out_file, name):
     """
     change pubtator formatted data into bio format and save it into out_file
 
@@ -57,11 +57,11 @@ def pub2bio(text_clean, procedure, id_list, out_file, b_tag, i_tag):
                             right_on = 'start')
             # change tag into bio format
             for k in tmp[tmp.start.notnull()].index:
-                tmp.at[k,'tag'] = b_tag
+                tmp.at[k,'tag'] = 'B-' + name
                 end = tmp.at[k,'end']
                 while tmp.at[k,'w_end'] < end :
                     k += 1
-                    tmp.at[k,'tag'] = i_tag
+                    tmp.at[k,'tag'] = 'I-' + name
             tmp = tmp[['word', 'tag']].fillna('O')
             # output into outfile
             tmp.to_csv(out_file, header = None, index = None,
@@ -134,15 +134,18 @@ def get_name(out_dir, name):
 if __name__ == '__main__':
     # get the procedure data from MedMention
     DATADIR = r'/Users/xuqinxin/nlp_data/MedMention'
-    OUTDIR = DATADIR+'/bio_procedure'
     filename = 'corpus_pubtator.txt'
+
+    name = 'procedure'
+    OUTDIR = DATADIR+'/bio_' + name
     procedure_tag = ['T060']
 
     tag_data, pmid, text_clean = pre_pub(procedure_tag, Path(DATADIR, filename))
+
     train_pmid, test_pmid, dev_pmid = train_test_dev_split(pmid)
-    out_name = get_name(OUTDIR, 'procedure')
+    file_id = [train_pmid, test_pmid, dev_pmid]
+    out_name = get_name(OUTDIR, name)
 
     Path(OUTDIR).mkdir(parents=True, exist_ok=True)
-    pub2bio(text_clean, tag_data, train_pmid, out_name[0], 'B-P', 'I-P')
-    pub2bio(text_clean, tag_data, test_pmid, out_name[1], 'B-P', 'I-P')
-    pub2bio(text_clean, tag_data, dev_pmid, out_name[2], 'B-P', 'I-P')
+    for i in range(len(file_id)):
+        pub2bio(text_clean, tag_data, file_id[i], out_name[i], name)
